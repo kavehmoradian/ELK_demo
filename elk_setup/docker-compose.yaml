@@ -8,7 +8,7 @@ volumes:
     driver: local
   kibanadata:
     driver: local
-  logstashdata01:
+  logstashdata:
     driver: local
 
 
@@ -84,7 +84,7 @@ services:
       co.elastic.logs/module: elasticsearch
     volumes:
       - certs:/usr/share/elasticsearch/config/certs
-      - esdata01:/usr/share/elasticsearch/data
+      - esdata:/usr/share/elasticsearch/data
     ports:
       - 9201:9200
     environment:
@@ -138,7 +138,7 @@ services:
       - XPACK_SECURITY_ENCRYPTIONKEY=${ENCRYPTION_KEY}
       - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${ENCRYPTION_KEY}
       - XPACK_REPORTING_ENCRYPTIONKEY=${ENCRYPTION_KEY}
-    mem_limit: ${KB_MEM_LIMIT}
+    mem_limit: ${MEM_LIMIT}
     healthcheck:
       test:
         [
@@ -148,3 +148,30 @@ services:
       interval: 10s
       timeout: 10s
       retries: 120
+
+  logstash:
+    depends_on:
+      es:
+        condition: service_healthy
+      kibana:
+        condition: service_healthy
+    image: docker.elastic.co/logstash/logstash:${STACK_VERSION}
+    labels:
+      co.elastic.logs/module: logstash
+    user: root
+    volumes:
+      - logstashdata:/usr/share/logstash/data
+      - certs:/usr/share/logstash/certs
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+    environment:
+      - NODE_NAME="logstash"
+      - xpack.monitoring.enabled=false
+      - xpack.monitoring.elasticsearch.hosts:["http://es:9200"]
+      - http.host:"0.0.0.0"
+      - ELASTIC_USER=elastic
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - ELASTIC_HOSTS=https://es:9200
+    command: logstash -f /usr/share/logstash/pipeline/logstash.conf
+    ports:
+      - "5044:5044/udp"
+    mem_limit: ${MEM_LIMIT}
