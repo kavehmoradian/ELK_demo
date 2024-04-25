@@ -1,0 +1,32 @@
+version: '3.6'
+
+services:
+  syslog:
+    image: balabit/syslog-ng:latest
+    container_name: syslog
+    entrypoint: /usr/sbin/syslog-ng
+    command: "-F -edv"
+    volumes:
+      - ./syslog-ng.conf:/etc/syslog-ng/syslog-ng.conf
+    ports:
+      - 514:514
+      - 601:601
+    networks:
+      - app
+  app:
+    build:
+      context: ./
+    container_name: app
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    ports:
+      - 8080:8080
+    depends_on:
+      - syslog
+    networks:
+      - app
+
+networks:
+  app:
+    external:
+      name: app
