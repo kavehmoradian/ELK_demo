@@ -14,9 +14,9 @@ volumes:
 
 # define network
 networks:
-  default:
-    name: elastic
-    external: false
+  app:
+    driver: bridge
+    name: app
 
 
 services:
@@ -74,6 +74,8 @@ services:
       interval: 1s
       timeout: 5s
       retries: 120
+    networks:
+      - app
 
   es:
     depends_on:
@@ -90,8 +92,8 @@ services:
     environment:
       - node.name=es
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
-      - cluster.name=test
-      - cluster.initial_master_nodes=es
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
       - bootstrap.memory_lock=true
       - xpack.security.enabled=true
       - xpack.security.http.ssl.enabled=true
@@ -118,6 +120,8 @@ services:
       interval: 10s
       timeout: 10s
       retries: 120
+    networks:
+      - app
 
   kibana:
     depends_on:
@@ -150,6 +154,8 @@ services:
       interval: 10s
       timeout: 10s
       retries: 120
+    networks:
+      - app
 
   logstash:
     depends_on:
@@ -168,8 +174,6 @@ services:
     environment:
       - NODE_NAME="logstash"
       - xpack.monitoring.enabled=false
-      - xpack.monitoring.elasticsearch.hosts:["http://es:9200"]
-      - http.host:"0.0.0.0"
       - ELASTIC_USER=elastic
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
       - ELASTIC_HOSTS=https://es:9200
@@ -177,3 +181,5 @@ services:
     ports:
       - "5044:5044/udp"
     mem_limit: ${MEM_LIMIT}
+    networks:
+      - app
